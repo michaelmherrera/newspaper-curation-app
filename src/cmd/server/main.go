@@ -115,6 +115,7 @@ func startServer() {
 	workflowhandler.Setup(r, path.Join(hp, "workflow"), conf, watcher)
 	issuefinderhandler.Setup(r, path.Join(hp, "find"), conf, watcher)
 	mochandler.Setup(r, path.Join(hp, "mocs"), conf)
+	batchhandler.Setup(r, path.Join(hp, "batches"), conf)
 	userhandler.Setup(r, path.Join(hp, "users"), conf)
 	titlehandler.Setup(r, path.Join(hp, "titles"), conf)
 
