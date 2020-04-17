@@ -5,7 +5,7 @@
 {{if .Data.Batches}}
 <ul>
   {{range .Data.Batches}}
-  <li>{{.Name}}</li>
+  <li><a href="">{{.Name}}: {{.Status}}</a></li>
   {{end}}
 </ul>
 {{else}}
