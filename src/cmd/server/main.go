@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	flags "github.com/jessevdk/go-flags"
+	"github.com/uoregon-libraries/newspaper-curation-app/src/cmd/server/internal/batchhandler"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/cmd/server/internal/issuefinderhandler"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/cmd/server/internal/mochandler"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/cmd/server/internal/responder"
