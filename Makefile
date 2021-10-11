@@ -23,7 +23,7 @@ build: $(shell ./scripts/cmdslist.sh)
 
 # For quick building of binaries, you can run something like "make bin/server"
 bin/%: src/cmd/% $(SOURCES) $(SOURCEDIRS)
-	go build -ldflags="-s -w -X github.com/uoregon-libraries/newspaper-curation-app/src/version.Version=$(BUILD)" -o $@ github.com/uoregon-libraries/newspaper-curation-app/$<
+	env GOOS=linux go build -ldflags="-s -w -X github.com/uoregon-libraries/newspaper-curation-app/src/version.Version=$(BUILD)" -o $@ github.com/uoregon-libraries/newspaper-curation-app/$<
 
 lint:
 	golint src/...

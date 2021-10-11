@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"io/ioutil"
 
 	"github.com/Nerdmaster/magicsql"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/cli"
@@ -137,7 +137,7 @@ func writeReport(purged []*models.Issue) {
 		panic(err)
 	}
 
-	err = os.WriteFile("purge.json", data, 0644)
+	err = ioutil.WriteFile("purge.json", data, 0644)
 	if err != nil {
 		logger.Errorf("Unable to write to purge.json: %s", err)
 	}
