@@ -38,7 +38,7 @@ NEWS_WEBROOT="https://news.somewhere.edu"
 # replaced with the LCCN being looked up.  The second location is only
 # considered if the first has no XML.
 MARC_LOCATION_1="/var/local/marc/{{lccn}}/marc.xml"
-MARC_LOCATION_2="https://chroniclingamerica.loc.gov/lccn/{{lccn}}/marc.xml"
+MARC_LOCATION_2="https://raw.githubusercontent.com/michaelmherrera/marcs/main/{{lccn}}/outlook_first_draft.xml"
 
 ###
 # Database settings
@@ -125,7 +125,7 @@ MINIMUM_ISSUE_PAGES=2
 # PDF sources.  e.g., "oru" results in batch names like
 # "batch_oru_20150101120000", attributed to the UO Knight Library.  It is best
 # to choose a code that chronam already knows about.
-PDF_BATCH_MARC_ORG_CODE="oru"
+PDF_BATCH_MARC_ORG_CODE="aol"
 
 # How many PDFs do we allow in a single batch?  This limit is a lot less
 # necessary now that fixing a batch is a simpler process.  Historically, it was
