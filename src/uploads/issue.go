@@ -10,12 +10,12 @@ import (
 
 // DaysIssueConsideredDangerous is how long we require an issue to be untouched
 // prior to anybody queueing it
-const DaysIssueConsideredDangerous = 2
+const DaysIssueConsideredDangerous = 0
 
 // DaysIssueConsideredNew is how long we warn users that the issue is new - but
 // it can be queued before that warning goes away so long as
 // DaysIssueConsideredDangerous has elapsed
-const DaysIssueConsideredNew = 14
+const DaysIssueConsideredNew = 0
 
 // Issue wraps a schema.Issue to add upload- and queue-specific validations and
 // behavior
