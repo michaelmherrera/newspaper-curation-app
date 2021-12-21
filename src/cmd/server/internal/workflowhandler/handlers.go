@@ -1,6 +1,7 @@
 package workflowhandler
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/uoregon-libraries/newspaper-curation-app/src/internal/logger"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/jobs"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/models"
+	"github.com/uoregon-libraries/newspaper-curation-app/src/privilege"
 	"github.com/uoregon-libraries/newspaper-curation-app/src/schema"
 )
 
@@ -20,48 +22,120 @@ func searchIssueError(resp *responder.Responder) {
 	resp.Render(responder.Empty)
 }
 
+func loadTitles() (schema.TitleList, error) {
+	var dbTitles, err = models.Titles()
+	if err != nil {
+		return nil, err
+	}
+
+	var titles schema.TitleList
+	for _, t := range dbTitles {
+		titles = append(titles, t.SchemaTitle())
+	}
+	titles.SortByName()
+
+	return titles, nil
+}
+
 // homeHandler shows claimed workflow items that need to be finished as well as
 // pending items which can be claimed
 func homeHandler(resp *responder.Responder, i *Issue) {
 	resp.Vars.Title = "Workflow"
 
-	// Get issues currently on user's desk
-	var uid = resp.Vars.User.ID
-	var issues, err = models.FindIssuesOnDesk(uid)
-	if err != nil {
-		logger.Errorf("Unable to find issues on user %d's desk: %s", uid, err)
-		searchIssueError(resp)
-		return
+	var err error
+	resp.Vars.Data["Titles"], err = loadTitles()
+	if err == nil {
+		resp.Vars.Data["MOCs"], err = models.AllMOCs()
 	}
-	resp.Vars.Data["MyDeskIssues"] = wrapDBIssues(issues)
 
-	// Get issues needing metadata
-	issues, err = models.FindAvailableIssuesByWorkflowStep(schema.WSReadyForMetadataEntry)
 	if err != nil {
-		logger.Errorf("Unable to find issues needing metadata entry: %s", err)
+		logger.Errorf("Unable to read data for workflow homepage: %s", err)
 		searchIssueError(resp)
 		return
 	}
-	resp.Vars.Data["PendingMetadataIssues"] = wrapClaimableDBIssues(resp.Vars.User, issues)
-
-	// Get issues needing metadata review
-	issues, err = models.FindAvailableIssuesByWorkflowStep(schema.WSAwaitingMetadataReview)
-	if err != nil {
-		logger.Errorf("Unable to find issues needing metadata review: %s", err)
-		searchIssueError(resp)
-		return
-	}
-	resp.Vars.Data["PendingReviewIssues"] = wrapClaimableDBIssues(resp.Vars.User, issues)
-
-	issues, err = models.FindAvailableIssuesByWorkflowStep(schema.WSUnfixableMetadataError)
-	if err != nil {
-		logger.Errorf(`Unable to find issues in the "unfixable" state: %s`, err)
-		searchIssueError(resp)
-		return
-	}
-	resp.Vars.Data["UnfixableErrorIssues"] = wrapClaimableDBIssues(resp.Vars.User, issues)
 
 	resp.Render(DeskTmpl)
+}
+
+type jsonResponse struct {
+	Code    int
+	Message string
+	Issues  []*JSONIssue
+	Counts  map[string]uint64
+}
+
+func applyIssueFilters(resp *responder.Responder, finder *models.IssueFinder) {
+	var moc = resp.Request.FormValue("moc")
+	var lccn = resp.Request.FormValue("lccn")
+
+	if moc != "" {
+		finder.MOC(moc)
+	}
+	if lccn != "" {
+		finder.LCCN(lccn)
+	}
+}
+
+func getJSONIssues(resp *responder.Responder) *jsonResponse {
+	var response = new(jsonResponse)
+	response.Counts = make(map[string]uint64)
+	response.Code = http.StatusOK
+	var finders = map[string]*models.IssueFinder{
+		"desk":             models.Issues().OnDesk(resp.Vars.User.ID),
+		"needs-metadata":   models.Issues().Available().OrderBy("lccn,date,edition").InWorkflowStep(schema.WSReadyForMetadataEntry),
+		"needs-review":     models.Issues().Available().OrderBy("metadata_entered_at").InWorkflowStep(schema.WSAwaitingMetadataReview),
+		"unfixable-errors": models.Issues().Available().InWorkflowStep(schema.WSUnfixableMetadataError),
+	}
+
+	// HACK: anybody who can't review their own metadata needs a different "needs-review" finder
+	if !resp.Vars.User.PermittedTo(privilege.ReviewOwnMetadata) {
+		finders["needs-review"] = finders["needs-review"].NotCuratedBy(resp.Vars.User.ID)
+	}
+
+	for tab, f := range finders {
+		applyIssueFilters(resp, f)
+		var err error
+		response.Counts[tab], err = f.Count()
+		if err != nil {
+			logger.Errorf("JSON request: error trying to count issues for %q: %s", tab, err)
+			response.Message = "Unable to retrieve issues from the database! Try again or contact support."
+			response.Code = http.StatusInternalServerError
+			return response
+		}
+	}
+
+	var selectedTab = resp.Request.FormValue("tab")
+	var finder = finders[selectedTab]
+	if finder == nil {
+		logger.Warnf("Unknown tab %q requested in workflow JSON handler", selectedTab)
+		response.Code = http.StatusBadRequest
+		response.Message = "Invalid / unknown data requested"
+		return response
+	}
+
+	var issues, err = finder.Limit(100).Fetch()
+	if err != nil {
+		logger.Errorf("Error reading issues in workflow JSON handler: %s", err)
+		response.Message = "Unable to retrieve issues from the database! Try again or contact support."
+		response.Code = http.StatusInternalServerError
+		return response
+	}
+
+	response.Issues = jsonify(issues, resp.Vars.User)
+	return response
+}
+
+// jsonHandler produces a JSON feed of issue information to enable
+// rendering a subset of issues
+func jsonHandler(resp *responder.Responder, i *Issue) {
+	var response = getJSONIssues(resp)
+	resp.Writer.Header().Add("Content-Type", "application/json")
+	resp.Writer.WriteHeader(response.Code)
+	var data, err = json.Marshal(response)
+	if err != nil {
+		logger.Criticalf("Unable to marshal %#v: %s", response, err)
+	}
+	resp.Writer.Write(data)
 }
 
 // viewIssueHandler displays the given issue to the user so it can be looked
@@ -85,7 +159,7 @@ func claimIssueHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("claim", fmt.Sprintf("issue id %d", i.ID))
+	resp.Audit(models.AuditActionClaim, fmt.Sprintf("issue id %d", i.ID))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue claimed successfully", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }
@@ -101,7 +175,7 @@ func unclaimIssueHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("unclaim", fmt.Sprintf("issue id %d", i.ID))
+	resp.Audit(models.AuditActionUnclaim, fmt.Sprintf("issue id %d", i.ID))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue removed from your task list", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }
@@ -168,7 +242,7 @@ func approveIssueMetadataHandler(resp *responder.Responder, i *Issue) {
 	if err != nil {
 		logger.Criticalf("Unable to queue issue finalization for issue id %d: %s", i.ID, err)
 	}
-	resp.Audit("approve-metadata", fmt.Sprintf("issue id %d", i.ID))
+	resp.Audit(models.AuditActionApproveMetadata, fmt.Sprintf("issue id %d", i.ID))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue approved", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }
@@ -196,7 +270,7 @@ func rejectIssueMetadataHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("reject-metadata", fmt.Sprintf("issue id %d", i.ID))
+	resp.Audit(models.AuditActionRejectMetadata, fmt.Sprintf("issue id %d", i.ID))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue rejected", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }

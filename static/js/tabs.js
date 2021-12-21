@@ -2,7 +2,7 @@
 *   This content is licensed according to the W3C Software License at
 *   https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document
 */
-(function () {
+window.addEventListener('load', function () {
   var tablist = document.querySelectorAll('[role="tablist"]')[0];
   if (tablist == null) {
     return;
@@ -45,10 +45,6 @@
   // Set the active tab
   parseTabState();
 
-  // Make sure that any history change loads the right tab, not just when the
-  // client requests a new page from the server
-  window.addEventListener('hashchange', parseTabState, false);
-
   function addListeners (index) {
     tabs[index].addEventListener('click', clickEventListener);
     tabs[index].addEventListener('keydown', keydownEventListener);
@@ -61,6 +57,16 @@
   // When a tab is clicked, activateTab is fired to activate it
   function clickEventListener (event) {
     var tab = event.target;
+    // Allow a child of the button to be clicked - for some reason even though
+    // the event is defined solely on the button, a span within the button
+    // "steals" the event without this.
+    while (tab.getAttribute('role') != 'tab') {
+      tab = tab.parentNode;
+      if (tab == null) {
+        console.log(`unable to find parent of ${event.target} with role of 'tab'!`);
+        return;
+      }
+    }
     activateTab(tab, false);
   };
 
@@ -158,20 +164,26 @@
     };
   };
 
-  // Returns the tab as defined in the URL fragment ("hash" to javascript)
-  function getFragmentTab() {
-    var hsh = new URLSearchParams(window.location.hash.substr(1));
-    return hsh.get('tab');
+  // Returns the tab as defined in the URL query ("search" to javascript)
+  function getTabFromURL() {
+    var srch = new URLSearchParams(window.location.search.substr(1));
+    return srch.get('tab');
   }
 
-  function setFragmentTab(tabid) {
-    var hsh = new URLSearchParams(window.location.hash.substr(1));
-    hsh.set('tab', tabid);
-    window.location.hash = hsh.toString();
+  function setURLTab(tabid) {
+    let u = new URL(window.location);
+    let srch = new URLSearchParams(u.search.substr(1));
+    srch.set('tab', tabid);
+    u.search = srch.toString();
+    history.replaceState(null, "", u);
   }
 
   // Activates any given tab panel
   function activateTab (tab, setFocus) {
+    if (tab.getAttribute('aria-selected') == 'true') {
+      return
+    }
+
     setFocus = setFocus || true;
     // Deactivate all other tabs
     deactivateTabs();
@@ -189,14 +201,18 @@
     document.getElementById(controls).removeAttribute('hidden');
 
     // Update the URL fragment if it's not already set properly
-    if (tab.id != getFragmentTab()) {
-      setFragmentTab(tab.id);
+    if (tab.id != getTabFromURL()) {
+      setURLTab(tab.id);
     }
 
     // Set focus when required
     if (setFocus) {
       tab.focus();
     };
+
+    // Fire off an event so tabs can handle custom on-select behaviors
+    const ev = new Event('tabselect');
+    tab.dispatchEvent(ev);
   };
 
   // Deactivate all tabs and tab panels
@@ -290,10 +306,10 @@
 
   // parseTabState determines which tab should be active based on the fragment
   function parseTabState() {
-    var tab = document.getElementById(getFragmentTab());
+    var tab = document.getElementById(getTabFromURL());
     if (tab == null) {
       tab = tabs[0];
     }
     activateTab(tab);
   }
-}());
+});

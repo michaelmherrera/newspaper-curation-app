@@ -38,12 +38,13 @@ func saveErrorHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("report-error", fmt.Sprintf("issue id %d", i.ID))
+	resp.Audit(models.AuditActionReportError, fmt.Sprintf("issue id %d", i.ID))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue error reported", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }
 
 func reviewUnfixableHandler(resp *responder.Responder, i *Issue) {
+	i.ValidateMetadata()
 	resp.Vars.Title = "Reviewing Issue Error(s)"
 	resp.Vars.Data["Issue"] = i
 	resp.Render(ViewErrorTmpl)
@@ -92,7 +93,7 @@ func returnErrorIssueHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("undo-error-issue", fmt.Sprintf("issue %d %s, comment: %q", i.ID, action, comment))
+	resp.Audit(models.AuditActionUndoErrorIssue, fmt.Sprintf("issue %d %s, comment: %q", i.ID, action, comment))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue moved back to NCA successfully", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }
@@ -119,7 +120,7 @@ func removeUnfixableIssueHandler(resp *responder.Responder, i *Issue) {
 		return
 	}
 
-	resp.Audit("remove-error-issue", fmt.Sprintf("issue %d, comment: %q", i.ID, comment))
+	resp.Audit(models.AuditActionRemoveErrorIssue, fmt.Sprintf("issue %d, comment: %q", i.ID, comment))
 	http.SetCookie(resp.Writer, &http.Cookie{Name: "Info", Value: "Issue is now being moved to the error folder", Path: "/"})
 	http.Redirect(resp.Writer, resp.Request, basePath, http.StatusFound)
 }

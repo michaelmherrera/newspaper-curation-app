@@ -34,6 +34,106 @@ Brief description, if necessary
 ### Migration
 -->
 
+## v3.11.2
+
+Hotfix
+
+### Fixed
+
+- Partial pages will no longer render - if a page fails to render, it will be *very* clear that something went wrong
+- Uploaded issues with file errors can now be seen instead of crashing mid-render
+
+## v3.11.1
+
+Hotfix
+
+### Fixed
+
+- The application no longer crashes when viewing issues flagged as having
+  unfixable errors
+
+## v3.11.0
+
+Audit logs and workflow improvements
+
+### Fixed
+
+- Audit logs can now be filtered without having to choose a single individual.
+
+### Added
+
+- New filtering options for audit logs to see grouped logs by general type.
+- Some basic info/help/background text is now shown after the audit log block
+  to hopefully help explain what exactly the purpose is for these logs.
+- Issues now store their most recent curation date so that in the workflow view
+  they can be sorted by those which have been waiting the longest for review.
+- The "Metadata Review" tab on the workflow page shows a rough wait time (since
+  metadata entry) per issue
+
+### Changed
+
+- Audit log types are now in a controlled list rather than just any text, which
+  should make the audit logs more meaningful as new stuff needs to be audited.
+- Both the "Metadata Entry" and "Metadata Review" tabs in the workflow page are
+  sorted in a deterministic way (used to be just whatever order the database
+  chose to return)
+  - Metadata Entry returns issues sorted by LCCN, issue date, and edition -
+    this isn't useful so much as it gives us some consistency that we
+    previously didn't have.
+  - Metadata Review returns issues sorted by when metadata was entered, oldest
+    first, so it's easy to tackle issues that have been sitting for a while.
+
+### Migration
+
+- Run the database migrations, e.g., with `goose`:
+  - `goose -dir ./db/migrations/ mysql "<user>:<password>@tcp(<db host>:3306)/<database name>" up`
+
+## v3.10.1
+
+Hotfix for workflow filters
+
+### Fixed
+
+- Curators no longer see their own issues in the list of issues awaiting
+  metadata approval unless they have the privileges to claim and approve those
+  issues. Now that one can only see 100 issues at a time, this is critical for
+  workflows with few people but hundreds of issues.
+
+## v3.10.0
+
+Admin Mega-Release: workflow UI improvements, audit log view / download
+
+### Fixed
+
+- In the workflow page, you can now properly click on a tab's badge (the
+  roundish dark circle with a number telling you how many issues are in the
+  given tab panel) to activate the tab.
+- Workflow tab selection no longer adds countless entries to your browser
+  history. (i.e., you can use your browser's "back" button to go to the page
+  you were at prior to the workflow page instead of having to hit "back" a
+  billion times)
+- Workflow tabs now manipulate the query string of the URL rather than the
+  fragment. This is mostly a "best practice" sort of fix, but it does mean the
+  "skip to main content" link now functions properly in the workflow pages,
+  where it used to kick you back to the "desk" tab.
+- Workflow tabs are HTML headings, which should be an improvement for users of
+  tools which let you browse and navigate to headings (e.g., screen readers).
+
+### Added
+
+- New app section for viewing and downloading audit logs (for admins only)
+- Workflow UI now has filters to only show issues with a particular LCCN and/or
+  MARC Org Code.
+
+### Changed
+
+- Refactor to how issues are pulled from the database, to enable other work
+- Workflow lazy-loading: the workflow pages should generally look the same as
+  previously, but they no longer pre-fetch gobs of data:
+  - A maximum of 100 issues is presented on a tab now
+  - Issues are loaded for a tab when the tab is selected rather than all tabs'
+    issues being loaded at once
+
 ## v3.9.0
 
 Issue error overhaul

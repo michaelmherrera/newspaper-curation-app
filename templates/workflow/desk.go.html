@@ -1,36 +1,98 @@
 {{block "content" .}}
 
+<div class="filter">
+  <h2>Filter / Search</h2>
+  <form id="filter-form" role="form">
+    <div class="form-group">
+      <label class="col-md-2 control-label" for="lccn">LCCN</label>
+      <div class="col-md-4">
+        <input class="form-control" list="titles" id="lccn" name="lccn" autocomplete="off" aria-describedby="lccn-help" />
+        <p id="lccn-help" class="help-block">
+          Enter an LCCN. You may start typing a title's LCCN or its name, and
+          on selection the appropriate LCCN will be set.
+        </p>
+      </div>
+
+      <datalist id="titles">
+        {{range .Data.Titles}}
+        <option value="{{.LCCN}}">{{.Name}} - {{.LCCN}}</option>
+        {{end}}
+      </datalist>
+
+      <label class="col-md-2 control-label" for="moc">MARC Org Code</label>
+      <div class="col-md-4">
+        <input class="form-control" list="mocs" id="moc" name="moc" autocomplete="off" aria-describedby="moc-help" />
+        <p id="moc-help" class="help-block">
+          Enter a MARC Org Code. You may start typing a code or its name, and
+          on selection the appropriate code will be set.
+        </p>
+      </div>
+
+      <datalist id="mocs">
+        {{range .Data.MOCs}}
+        {{if .Name}}
+        <option value="{{.Code}}">{{.Name}} - {{.Code}}</option>
+        {{else}}
+        <option value="{{.Code}}">
+        {{end}}
+        {{end}}
+      </datalist>
+    </div>
+
+    <div class="form-group">
+      <div class="col-md-10 col-md-offset-2">
+        <button type="Submit">Apply</button>
+        <button type="Reset" id="clear-filters">Clear Filters</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="row">
+  <div class="col-md-8"><h2>Issues</h2></div>
+  <div class="col-md-4">
+    <div id="json-status" role="status" class="alert alert-info" aria-live="polite">Status: N/A</div>
+  </div>
+</div>
 <div class="tabs">
   <div role="tablist" aria-label="Workflow">
-    <button role="tab" aria-selected="true" aria-controls="desk-tab" id="desk">
-      Desk
-      <span class="badge">{{.Data.MyDeskIssues|len}}</span>
+    <button role="tab" aria-selected="false" aria-controls="desk-tab" id="desk">
+      <h3>
+        Desk
+        <span class="badge">loading...</span>
+      </h3>
     </button>
 
     {{if .User.PermittedTo EnterIssueMetadata}}
     <button role="tab" aria-selected="false" aria-controls="needs-metadata-tab" id="needs-metadata" tabindex="-1">
-      Metadata Entry
-      <span class="badge">{{.Data.PendingMetadataIssues|len}}</span>
+      <h3>
+        Metadata Entry
+        <span class="badge">loading...</span>
+      </h3>
     </button>
     {{end}}
 
     {{if .User.PermittedTo ReviewIssueMetadata}}
     <button role="tab" aria-selected="false" aria-controls="needs-review-tab" id="needs-review" tabindex="-1">
-      Metadata Review
-      <span class="badge">{{.Data.PendingReviewIssues|len}}</span>
+      <h3>
+        Metadata Review
+        <span class="badge">loading...</span>
+      </h3>
     </button>
     {{end}}
 
     {{if .User.PermittedTo ReviewUnfixableIssues}}
     <button role="tab" aria-selected="false" aria-controls="unfixable-errors-tab" id="unfixable-errors" tabindex="-1">
-      Unfixable Errors
-      <span class="badge">{{.Data.UnfixableErrorIssues|len}}</span>
+      <h3>
+        Unfixable Errors
+        <span class="badge">loading...</span>
+      </h3>
     </button>
     {{end}}
   </div>
 
   <!-- Everybody can see their own desk -->
-  <div tabindex="0" role="tabpanel" id="desk-tab" aria-labelledby="desk">
+  <div tabindex="0" role="tabpanel" id="desk-tab" aria-labelledby="desk" hidden="">
     {{template "desk" .}}
   </div>
 
@@ -65,8 +127,7 @@
     and any work you've done will be lost.
   </p>
 
-{{if .Data.MyDeskIssues}}
-  <table class="table">
+  <table class="table" hidden>
     <caption>Tasks</caption>
     <thead>
       <tr>
@@ -76,16 +137,9 @@
         <th scope="col">Actions</th>
       </tr>
     </thead>
-
-    <tbody>
-    {{range .Data.MyDeskIssues}}
-      {{template "MyDeskIssue" (dict "Issue" . "User" $.User)}}
-    {{end}}
-    </tbody>
   </table>
-{{else}}
-  <em>There are no tasks awaiting your attention</em>
-{{end}}
+
+  <div class="empty" hidden><em>There are no tasks awaiting your attention which match your chosen filters</em></div>
 
 {{end}}<!-- block "desk" -->
 
@@ -97,26 +151,18 @@
     be ready to convert to a batch and ingest.
   </p>
 
-  {{if .Data.PendingMetadataIssues}}
-    <table class="table">
-      <caption>Issues Needing Metadata Entry</caption>
-      <thead>
-        <tr>
-          <th scope="col">Title</th>
-          <th scope="col">Date</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
+  <table class="table" hidden>
+    <caption>Issues Needing Metadata Entry</caption>
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Date</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+  </table>
 
-      <tbody>
-      {{range .Data.PendingMetadataIssues}}
-        {{template "PendingMetadataIssues" (dict "Issue" . "User" $.User)}}
-      {{end}}
-      </tbody>
-    </table>
-  {{else}}
-    <em>There are no issues needing metadata entry</em>
-  {{end}}
+  <div class="empty" hidden><em>There are no issues needing metadata entry which match your chosen filters</em></div>
 {{end}} <!-- block "needs-metadata" -->
 
 {{block "needs-review" .}}
@@ -124,27 +170,23 @@
     These issues have had all metadata entered and need an issue reviewer to
     flag them as ready for processing.
   </p>
+  <p>
+    <em>"Wait Time" refers to the amount of time that has passed since the
+    issue's metadata was last updated by a curator</em>
+  </p>
 
-  {{if .Data.PendingReviewIssues}}
-    <table class="table">
-      <caption>Issues Needing Metadata Review</caption>
-      <thead>
-        <tr>
-          <th scope="col">Title</th>
-          <th scope="col">Date</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
-
-      <tbody>
-      {{range .Data.PendingReviewIssues}}
-        {{template "PendingReviewIssues" (dict "Issue" . "User" $.User)}}
-      {{end}}
-      </tbody>
-    </table>
-  {{else}}
-    <em>There are no issues needing metadata review</em>
-  {{end}}
+  <table class="table" hidden>
+    <caption>Issues Needing Metadata Review</caption>
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Date</th>
+        <th scope="col">Wait Time</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+  </table>
+  <div class="empty" hidden><em>There are no issues needing metadata review which match your chosen filters</em></div>
 {{end}} <!-- block "needs-review" -->
 
 {{block "unfixable-errors" .}}
@@ -153,24 +195,22 @@
     necessitate them being removed from NCA entirely and manually fixed
   </p>
 
-  {{if .Data.UnfixableErrorIssues}}
-    <table class="table">
-      <caption>Issues With Unfixable Errors</caption>
-      <thead>
-        <tr>
-          <th scope="col">Title</th>
-          <th scope="col">Date</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
-
-      <tbody>
-      {{range .Data.UnfixableErrorIssues}}
-        {{template "UnfixableErrorIssues" (dict "Issue" . "User" $.User)}}
-      {{end}}
-      </tbody>
-    </table>
-  {{else}}
-    <em>There are no issues with unfixable errors</em>
-  {{end}}
+  <table class="table" hidden>
+    <caption>Issues With Unfixable Errors</caption>
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Date</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+  </table>
+  <div class="empty" hidden><em>There are no issues with unfixable errors which match your chosen filters</em></div>
 {{end}} <!-- block "unfixable-errors" -->
+
+{{block "extrajs" .}}
+  {{IncludeJS "workflow_issue_tabs"}}
+  <script>
+  const workflowHomeURL = {{WorkflowHomeURL}};
+  </script>
+{{end}}
