@@ -38,8 +38,8 @@ NEWS_WEBROOT="https://news.somewhere.edu"
 # replaced with the LCCN being looked up.  The second location is only
 # considered if the first has no XML.
 # MARC_LOCATION_1="/var/local/marc/{{lccn}}/marc.xml"
-MARC_LOCATION_1="https://raw.githubusercontent.com/michaelmherrera/marcs/main/{{lccn}}/outlook_first_draft.xml"
-MARC_LOCATION_2="https://raw.githubusercontent.com/michaelmherrera/marcs/main/{{lccn}}/outlook_first_draft.xml"
+MARC_LOCATION_1="https://raw.githubusercontent.com/michaelmherrera/marcs/main/{{lccn}}/marc.xml"
+MARC_LOCATION_2="https://raw.githubusercontent.com/michaelmherrera/marcs/main/{{lccn}}/marc.xml"
 
 ###
 # Database settings
