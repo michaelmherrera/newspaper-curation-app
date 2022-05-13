@@ -148,12 +148,12 @@ MIN_BATCH_SIZE=0
 ###
 
 # DPI for ghostscript to use on the PDF-to-PNG conversion
-DPI=200
+DPI=300
 
 # JP2 quality value for graphicsmagick
-QUALITY=62.5
+QUALITY=100
 
 # Set this to the value your scanned images use to embed JPGs.  This should be
 # 150 per the NDNP spec, but could be changed if scanned images aren't under
 # your control.
-SCANNED_PDF_DPI=150
+SCANNED_PDF_DPI=300

@@ -2,7 +2,6 @@ package uploads
 
 import (
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/uoregon-libraries/gopkg/pdf"
@@ -27,8 +26,8 @@ func (f *File) ValidateDPI(expected int) {
 		return
 	}
 
-	var maxDPI = float64(expected) * 1.15
-	var minDPI = float64(expected) * 0.85
+	// var maxDPI = float64(expected) * 1.15
+	// var minDPI = float64(expected) * 0.85
 
 	var images, err = _dpifunc(f.Location)
 	if err != nil {
@@ -45,25 +44,25 @@ func (f *File) ValidateDPI(expected int) {
 	// which are rather irrelevant, but it's impossible to tell exactly which
 	// matter and which don't from a program.  So for now, all embedded images,
 	// unless they're absurdly small, need to have our expected DPI.
-	var width, height int
-	var xdpi, ydpi float64
-	var invalidImage bool
-	for _, image := range images {
-		width, _ = strconv.Atoi(image.Width)
-		height, _ = strconv.Atoi(image.Height)
-		if width*height < 1000 {
-			continue
-		}
+	// var width, height int
+	// var xdpi, ydpi float64
+	// var invalidImage bool
+	// for _, image := range images {
+	// 	width, _ = strconv.Atoi(image.Width)
+	// 	height, _ = strconv.Atoi(image.Height)
+	// 	if width*height < 1000 {
+	// 		continue
+	// 	}
 
-		xdpi, _ = strconv.ParseFloat(image.XPPI, 64)
-		ydpi, _ = strconv.ParseFloat(image.YPPI, 64)
-		if xdpi < minDPI || xdpi > maxDPI || ydpi < minDPI || ydpi > maxDPI {
-			invalidImage = true
-			break
-		}
-	}
+	// 	xdpi, _ = strconv.ParseFloat(image.XPPI, 64)
+	// 	ydpi, _ = strconv.ParseFloat(image.YPPI, 64)
+	// 	if xdpi < minDPI || xdpi > maxDPI || ydpi < minDPI || ydpi > maxDPI {
+	// 		invalidImage = true
+	// 		break
+	// 	}
+	// }
 
-	if invalidImage {
-		f.AddError(apperr.Errorf("contains one or more invalid images"))
-	}
+	// if invalidImage {
+	// 	f.AddError(apperr.Errorf("contains one or more invalid images"))
+	// }
 }
